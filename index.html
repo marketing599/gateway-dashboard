@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gateway Group - Marketing Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { background: #0f172a; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Icons as simple SVG components
+        const RefreshIcon = () => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
+                <path d="M21 3v5h-5"/>
+            </svg>
+        );
+
+        const UsersIcon = () => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+        );
+
+        const DollarIcon = () => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="1" x2="12" y2="23"/>
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+            </svg>
+        );
+
+        const EyeIcon = () => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                <circle cx="12" cy="12" r="3"/>
+            </svg>
+        );
+
+        const TargetIcon = () => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <circle cx="12" cy="12" r="6"/>
+                <circle cx="12" cy="12" r="2"/>
+            </svg>
+        );
+
+        const CheckIcon = () => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+        );
+
+        const ExternalLinkIcon = () => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                <polyline points="15 3 21 3 21 9"/>
+                <line x1="10" y1="14" x2="21" y2="3"/>
+            </svg>
+        );
+
+        // KPI Card Component
+        function KPICard({ title, value, icon: Icon, color, subvalue }) {
+            const colors = {
+                blue: 'from-blue-500/20 to-blue-600/10 border-blue-500/30 text-blue-400',
+                green: 'from-green-500/20 to-green-600/10 border-green-500/30 text-green-400',
+                amber: 'from-amber-500/20 to-amber-600/10 border-amber-500/30 text-amber-400',
+                purple: 'from-purple-500/20 to-purple-600/10 border-purple-500/30 text-purple-400'
+            };
+
+            return (
+                <div className={`bg-gradient-to-br ${colors[color]} border rounded-xl p-5`}>
+                    <div className="flex items-start justify-between mb-3">
+                        <Icon />
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">Live</span>
+                    </div>
+                    <p className="text-2xl font-bold text-white">{value}</p>
+                    <p className="text-sm opacity-70 mt-1">{title}</p>
+                    {subvalue && <p className="text-xs opacity-50 mt-1 font-mono">{subvalue}</p>}
+                </div>
+            );
+        }
+
+        // Main Dashboard Component
+        function Dashboard() {
+            const [activeTab, setActiveTab] = useState('overview');
+            const [lastUpdated, setLastUpdated] = useState(new Date());
+
+            // Live data from Windsor.ai + HubSpot (March 10, 2026)
+            const data = {
+                googleAds: {
+                    spend: 893.86,
+                    clicks: 113,
+                    impressions: 1887,
+                    conversions: 1,
+                    cpc: 7.91,
+                    campaigns: [
+                        { name: 'Basement & Second Suites – Homeowners', spend: 829.05, clicks: 107, conversions: 0 },
+                        { name: 'Multi-Unit Investors – Hamilton', spend: 64.81, clicks: 6, conversions: 1 }
+                    ]
+                },
+                metaAds: {
+                    spend: 119.49,
+                    clicks: 125,
+                    impressions: 5558,
+                    reach: 4641,
+                    leads: 4,
+                    campaigns: [
+                        { name: 'Retargeting - Website Visitors', spend: 95.06, clicks: 97, leads: 4 },
+                        { name: 'Messages - Basement + Legal Suites', spend: 24.43, clicks: 28, leads: 0 }
+                    ]
+                },
+                ga4: {
+                    sessions: 891,
+                    users: 753,
+                    pageviews: 1457,
+                    bounceRate: 58.9
+                },
+                hubspot: {
+                    totalContacts: 28,
+                    leadsBySource: {
+                        PAID_SOCIAL: 4,
+                        PAID_SEARCH: 1,
+                        ORGANIC_SEARCH: 3,
+                        DIRECT_TRAFFIC: 1,
+                        OFFLINE: 19
+                    },
+                    recentLeads: [
+                        { name: "Ben", source: "Manual Entry", date: "2026-03-09", hubspotUrl: "https://app.hubspot.com/contacts/244222124/record/0-1/453664836335" },
+                        { name: "Pierre Ninmer", source: "Meta Ads", date: "2026-03-08", hubspotUrl: "https://app.hubspot.com/contacts/244222124/record/0-1/452681821898" },
+                        { name: "Leanne", source: "Manual Entry", date: "2026-03-06", hubspotUrl: "https://app.hubspot.com/contacts/244222124/record/0-1/451596857075" },
+                        { name: "Chris Chilcott", source: "Meta Ads", date: "2026-03-06", hubspotUrl: "https://app.hubspot.com/contacts/244222124/record/0-1/451239163619" },
+                        { name: "Bhupinder Sangroha", source: "Meta Ads", date: "2026-03-04", hubspotUrl: "https://app.hubspot.com/contacts/244222124/record/0-1/448642523872" }
+                    ]
+                },
+                social: {
+                    linkedin: { followers: 210, impressions30d: 1405, clicks30d: 133, engagementRate: 12.3 },
+                    facebook: { followers: 342, impressions30d: 5703, engagements30d: 186 },
+                    instagram: { followers: 2684, reach30d: 4883 }
+                }
+            };
+
+            const totalSpend = data.googleAds.spend + data.metaAds.spend;
+            const totalLeads = data.googleAds.conversions + data.metaAds.leads;
+            const blendedCPL = totalLeads > 0 ? totalSpend / totalLeads : 0;
+
+            return (
+                <div className="min-h-screen bg-slate-950 text-white">
+                    {/* Header */}
+                    <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-sm sticky top-0 z-50">
+                        <div className="max-w-7xl mx-auto px-6 py-4">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center font-bold text-lg">
+                                        G
+                                    </div>
+                                    <div>
+                                        <h1 className="text-xl font-semibold tracking-tight">Gateway Group</h1>
+                                        <p className="text-xs text-slate-500 font-mono">Marketing Dashboard • L10 Ready</p>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-2 text-slate-500 text-sm">
+                                        <span className="font-mono">{lastUpdated.toLocaleTimeString()}</span>
+                                    </div>
+                                    <button
+                                        onClick={() => setLastUpdated(new Date())}
+                                        className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 rounded-lg text-amber-400 transition-all duration-200"
+                                    >
+                                        <RefreshIcon />
+                                        Refresh
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Tabs */}
+                            <nav className="flex gap-1 mt-4 -mb-px">
+                                {['overview', 'leads', 'ads', 'social'].map((tab) => (
+                                    <button
+                                        key={tab}
+                                        onClick={() => setActiveTab(tab)}
+                                        className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-all duration-200 ${
+                                            activeTab === tab
+                                                ? 'bg-slate-800 text-amber-400 border-t border-x border-slate-700'
+                                                : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
+                                        }`}
+                                    >
+                                        {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                                    </button>
+                                ))}
+                            </nav>
+                        </div>
+                    </header>
+
+                    <main className="max-w-7xl mx-auto px-6 py-8">
+                        {/* Overview Tab */}
+                        {activeTab === 'overview' && (
+                            <div className="space-y-8">
+                                {/* KPI Cards */}
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <KPICard
+                                        title="Total Contacts"
+                                        value={data.hubspot.totalContacts}
+                                        icon={UsersIcon}
+                                        color="blue"
+                                    />
+                                    <KPICard
+                                        title="Ad Spend (30d)"
+                                        value={`$${totalSpend.toFixed(0)}`}
+                                        icon={DollarIcon}
+                                        color="amber"
+                                        subvalue={`Google: $${data.googleAds.spend.toFixed(0)} • Meta: $${data.metaAds.spend.toFixed(0)}`}
+                                    />
+                                    <KPICard
+                                        title="Website Sessions"
+                                        value={data.ga4.sessions.toLocaleString()}
+                                        icon={EyeIcon}
+                                        color="green"
+                                        subvalue={`${data.ga4.users} users • ${(100 - data.ga4.bounceRate).toFixed(0)}% engaged`}
+                                    />
+                                    <KPICard
+                                        title="Ad Leads"
+                                        value={totalLeads}
+                                        icon={TargetIcon}
+                                        color="purple"
+                                        subvalue={`CPL: $${blendedCPL.toFixed(0)}`}
+                                    />
+                                </div>
+
+                                {/* Ad Performance */}
+                                <div className="grid md:grid-cols-2 gap-6">
+                                    {/* Google Ads */}
+                                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center font-bold">G</div>
+                                            <div>
+                                                <h3 className="font-semibold">Google Ads</h3>
+                                                <span className="text-xs text-green-400">Live via Windsor.ai</span>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-4 gap-3 mb-4">
+                                            <div className="text-center">
+                                                <p className="text-xl font-bold">${data.googleAds.spend.toFixed(0)}</p>
+                                                <p className="text-xs text-slate-500">Spend</p>
+                                            </div>
+                                            <div className="text-center">
+                                                <p className="text-xl font-bold">{data.googleAds.clicks}</p>
+                                                <p className="text-xs text-slate-500">Clicks</p>
+                                            </div>
+                                            <div className="text-center">
+                                                <p className="text-xl font-bold">{data.googleAds.conversions}</p>
+                                                <p className="text-xs text-slate-500">Conv.</p>
+                                            </div>
+                                            <div className="text-center">
+                                                <p className="text-xl font-bold">${data.googleAds.cpc.toFixed(2)}</p>
+                                                <p className="text-xs text-slate-500">CPC</p>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {data.googleAds.campaigns.map((c, i) => (
+                                                <div key={i} className="flex items-center justify-between p-2 bg-slate-800/50 rounded text-sm">
+                                                    <span className="text-slate-400 truncate max-w-[50%]">{c.name}</span>
+                                                    <span className="font-mono">${c.spend.toFixed(0)} • {c.clicks} clicks</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Meta Ads */}
+                                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center font-bold">M</div>
+                                            <div>
+                                                <h3 className="font-semibold">Meta Ads</h3>
+                                                <span className="text-xs text-green-400">Live via Windsor.ai</span>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-4 gap-3 mb-4">
+                                            <div className="text-center">
+                                                <p className="text-xl font-bold">${data.metaAds.spend.toFixed(0)}</p>
+                                                <p className="text-xs text-slate-500">Spend</p>
+                                            </div>
+                                            <div className="text-center">
+                                                <p className="text-xl font-bold">{data.metaAds.clicks}</p>
+                                                <p className="text-xs text-slate-500">Clicks</p>
+                                            </div>
+                                            <div className="text-center">
+                                                <p className="text-xl font-bold">{data.metaAds.leads}</p>
+                                                <p className="text-xs text-slate-500">Leads</p>
+                                            </div>
+                                            <div className="text-center">
+                                                <p className="text-xl font-bold">${(data.metaAds.spend / data.metaAds.leads).toFixed(0)}</p>
+                                                <p className="text-xs text-slate-500">CPL</p>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {data.metaAds.campaigns.map((c, i) => (
+                                                <div key={i} className="flex items-center justify-between p-2 bg-slate-800/50 rounded text-sm">
+                                                    <span className="text-slate-400 truncate max-w-[50%]">{c.name}</span>
+                                                    <span className="font-mono">${c.spend.toFixed(0)} • {c.leads} leads</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Recent Leads */}
+                                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                                    <h3 className="text-lg font-semibold mb-4">Recent Leads</h3>
+                                    <div className="space-y-2">
+                                        {data.hubspot.recentLeads.map((lead, i) => (
+                                            <div key={i} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 font-medium">
+                                                        {lead.name.charAt(0)}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-medium">{lead.name}</p>
+                                                        <p className="text-xs text-slate-500">{lead.source} • {lead.date}</p>
+                                                    </div>
+                                                </div>
+                                                <a 
+                                                    href={lead.hubspotUrl} 
+                                                    target="_blank" 
+                                                    rel="noopener noreferrer"
+                                                    className="flex items-center gap-1 text-sm text-blue-400 hover:text-blue-300"
+                                                >
+                                                    View <ExternalLinkIcon />
+                                                </a>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Leads Tab */}
+                        {activeTab === 'leads' && (
+                            <div className="space-y-6">
+                                <div className="grid md:grid-cols-3 gap-4">
+                                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 text-center">
+                                        <p className="text-4xl font-bold text-amber-400">{data.hubspot.totalContacts}</p>
+                                        <p className="text-slate-500 mt-1">Total Contacts</p>
+                                    </div>
+                                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 text-center">
+                                        <p className="text-4xl font-bold text-green-400">5</p>
+                                        <p className="text-slate-500 mt-1">From Paid Ads</p>
+                                    </div>
+                                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 text-center">
+                                        <p className="text-4xl font-bold text-blue-400">$202.67</p>
+                                        <p className="text-slate-500 mt-1">Blended CPL</p>
+                                    </div>
+                                </div>
+
+                                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                                    <h3 className="text-lg font-semibold mb-4">Lead Sources</h3>
+                                    <div className="space-y-3">
+                                        {Object.entries(data.hubspot.leadsBySource).map(([source, count]) => {
+                                            const labels = {
+                                                PAID_SOCIAL: 'Meta Ads',
+                                                PAID_SEARCH: 'Google Ads',
+                                                ORGANIC_SEARCH: 'Organic Search',
+                                                DIRECT_TRAFFIC: 'Direct',
+                                                OFFLINE: 'Manual Entry'
+                                            };
+                                            const colors = {
+                                                PAID_SOCIAL: 'bg-blue-500',
+                                                PAID_SEARCH: 'bg-green-500',
+                                                ORGANIC_SEARCH: 'bg-purple-500',
+                                                DIRECT_TRAFFIC: 'bg-amber-500',
+                                                OFFLINE: 'bg-slate-500'
+                                            };
+                                            const width = (count / data.hubspot.totalContacts) * 100;
+                                            return (
+                                                <div key={source} className="flex items-center gap-4">
+                                                    <div className="w-32 text-sm text-slate-400">{labels[source]}</div>
+                                                    <div className="flex-1 bg-slate-800 rounded-full h-6 overflow-hidden">
+                                                        <div 
+                                                            className={`h-full ${colors[source]} flex items-center justify-end px-2`}
+                                                            style={{ width: `${Math.max(width, 10)}%` }}
+                                                        >
+                                                            <span className="text-xs font-mono text-white">{count}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Ads Tab */}
+                        {activeTab === 'ads' && (
+                            <div className="space-y-6">
+                                <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                                    <div className="flex items-center gap-2">
+                                        <CheckIcon />
+                                        <span className="text-green-300 font-medium">Campaign Attribution Working</span>
+                                    </div>
+                                    <p className="text-sm text-slate-400 mt-1">
+                                        UTM tracking confirmed. Meta Retargeting campaign is your best performer at $23.77 CPL.
+                                    </p>
+                                </div>
+
+                                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                                    <h3 className="text-lg font-semibold mb-4">Campaign Performance (Last 30 Days)</h3>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm">
+                                            <thead>
+                                                <tr className="text-left text-slate-500 border-b border-slate-800">
+                                                    <th className="pb-3">Campaign</th>
+                                                    <th className="pb-3">Platform</th>
+                                                    <th className="pb-3 text-right">Spend</th>
+                                                    <th className="pb-3 text-right">Clicks</th>
+                                                    <th className="pb-3 text-right">Leads</th>
+                                                    <th className="pb-3 text-right">CPL</th>
+                                                    <th className="pb-3 text-right">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="text-slate-300">
+                                                <tr className="border-b border-slate-800/50">
+                                                    <td className="py-3">Retargeting - Website Visitors</td>
+                                                    <td><span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs">Meta</span></td>
+                                                    <td className="text-right font-mono">$95.06</td>
+                                                    <td className="text-right font-mono">97</td>
+                                                    <td className="text-right font-mono">4</td>
+                                                    <td className="text-right font-mono text-green-400">$23.77</td>
+                                                    <td className="text-right">✅ Best</td>
+                                                </tr>
+                                                <tr className="border-b border-slate-800/50">
+                                                    <td className="py-3">Multi-Unit Investors – Hamilton</td>
+                                                    <td><span className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs">Google</span></td>
+                                                    <td className="text-right font-mono">$64.81</td>
+                                                    <td className="text-right font-mono">6</td>
+                                                    <td className="text-right font-mono">1</td>
+                                                    <td className="text-right font-mono">$64.81</td>
+                                                    <td className="text-right">✓ OK</td>
+                                                </tr>
+                                                <tr className="border-b border-slate-800/50">
+                                                    <td className="py-3">Basement & Second Suites – Homeowners</td>
+                                                    <td><span className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs">Google</span></td>
+                                                    <td className="text-right font-mono">$829.05</td>
+                                                    <td className="text-right font-mono">107</td>
+                                                    <td className="text-right font-mono">0</td>
+                                                    <td className="text-right font-mono text-red-400">∞</td>
+                                                    <td className="text-right">⚠️ Review</td>
+                                                </tr>
+                                                <tr>
+                                                    <td className="py-3">Messages - Basement + Legal Suites</td>
+                                                    <td><span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs">Meta</span></td>
+                                                    <td className="text-right font-mono">$24.43</td>
+                                                    <td className="text-right font-mono">28</td>
+                                                    <td className="text-right font-mono">0</td>
+                                                    <td className="text-right font-mono">—</td>
+                                                    <td className="text-right">Test</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Social Tab */}
+                        {activeTab === 'social' && (
+                            <div className="space-y-6">
+                                <div className="grid md:grid-cols-3 gap-6">
+                                    {/* LinkedIn */}
+                                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                                        <div className="flex items-center gap-3 mb-6">
+                                            <div className="w-10 h-10 rounded-lg bg-[#0A66C2] flex items-center justify-center font-bold text-lg">in</div>
+                                            <div>
+                                                <h3 className="font-semibold">LinkedIn</h3>
+                                                <span className="text-xs text-green-400">Live via Windsor.ai</span>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-4">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-slate-500">Followers</span>
+                                                <span className="font-mono font-medium text-xl">{data.social.linkedin.followers}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-slate-500">Impressions (30d)</span>
+                                                <span className="font-mono font-medium">{data.social.linkedin.impressions30d.toLocaleString()}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-slate-500">Clicks (30d)</span>
+                                                <span className="font-mono font-medium">{data.social.linkedin.clicks30d}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-slate-500">Avg Engagement</span>
+                                                <span className="font-mono font-medium text-green-400">{data.social.linkedin.engagementRate}%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Facebook */}
+                                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                                        <div className="flex items-center gap-3 mb-6">
+                                            <div className="w-10 h-10 rounded-lg bg-[#1877F2] flex items-center justify-center font-bold text-lg">f</div>
+                                            <div>
+                                                <h3 className="font-semibold">Facebook</h3>
+                                                <span className="text-xs text-green-400">Live via Windsor.ai</span>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-4">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-slate-500">Page Likes</span>
+                                                <span className="font-mono font-medium text-xl">{data.social.facebook.followers}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-slate-500">Impressions (30d)</span>
+                                                <span className="font-mono font-medium">{data.social.facebook.impressions30d.toLocaleString()}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-slate-500">Engagements (30d)</span>
+                                                <span className="font-mono font-medium">{data.social.facebook.engagements30d}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Instagram */}
+                                    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                                        <div className="flex items-center gap-3 mb-6">
+                                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500 flex items-center justify-center font-bold text-lg">IG</div>
+                                            <div>
+                                                <h3 className="font-semibold">Instagram</h3>
+                                                <span className="text-xs text-green-400">Live via Windsor.ai</span>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-4">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-slate-500">Followers</span>
+                                                <span className="font-mono font-medium text-xl">{data.social.instagram.followers.toLocaleString()}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-slate-500">Reach (30d)</span>
+                                                <span className="font-mono font-medium">{data.social.instagram.reach30d.toLocaleString()}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Combined Stats */}
+                                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                                    <h3 className="text-lg font-semibold mb-4">Combined Social Reach</h3>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                        <div className="text-center p-4 bg-slate-800/50 rounded-lg">
+                                            <p className="text-3xl font-bold text-amber-400">
+                                                {(data.social.linkedin.followers + data.social.facebook.followers + data.social.instagram.followers).toLocaleString()}
+                                            </p>
+                                            <p className="text-slate-500 text-sm mt-1">Total Followers</p>
+                                        </div>
+                                        <div className="text-center p-4 bg-slate-800/50 rounded-lg">
+                                            <p className="text-3xl font-bold text-blue-400">
+                                                {(data.social.linkedin.impressions30d + data.social.facebook.impressions30d).toLocaleString()}
+                                            </p>
+                                            <p className="text-slate-500 text-sm mt-1">Total Impressions</p>
+                                        </div>
+                                        <div className="text-center p-4 bg-slate-800/50 rounded-lg">
+                                            <p className="text-3xl font-bold text-green-400">
+                                                {data.social.instagram.reach30d.toLocaleString()}
+                                            </p>
+                                            <p className="text-slate-500 text-sm mt-1">Instagram Reach</p>
+                                        </div>
+                                        <div className="text-center p-4 bg-slate-800/50 rounded-lg">
+                                            <p className="text-3xl font-bold text-purple-400">
+                                                {data.social.linkedin.clicks30d + data.social.facebook.engagements30d}
+                                            </p>
+                                            <p className="text-slate-500 text-sm mt-1">Total Engagements</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </main>
+
+                    {/* Footer */}
+                    <footer className="border-t border-slate-800 mt-12 py-6">
+                        <div className="max-w-7xl mx-auto px-6 text-center text-slate-600 text-sm">
+                            Gateway Group Marketing Dashboard • HubSpot Portal 244222124 • Built for L10 Meetings
+                        </div>
+                    </footer>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<Dashboard />, document.getElementById('root'));
+    </script>
+</body>
+</html>
